@@ -40,7 +40,10 @@ fun ChargingList(
 
             SwipeToDismiss(state = dismissState, background = {
                 Box(
-                    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.error).padding(horizontal = 16.dp), contentAlignment = Alignment.CenterEnd
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.error)
+                        .padding(horizontal = 16.dp), contentAlignment = Alignment.CenterEnd
                 ) {
                     Icon(
                         Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.onError
@@ -74,7 +77,9 @@ fun ChargingRecordItem(
     record: ChargingRecord, onEdit: (ChargingRecord) -> Unit, modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth().padding(8.dp), elevation = 4.dp
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp), elevation = 4.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("日期: ${record.date}", style = MaterialTheme.typography.bodyMedium)

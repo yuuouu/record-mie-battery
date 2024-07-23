@@ -28,7 +28,9 @@ fun ChargingChart(records: List<ChargingRecord>) {
         Text("充电效率图表", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
         Chart(
-            chart = lineChart(), model = entryModelOf(*chartEntries.toTypedArray()), startAxis = startAxis(), bottomAxis = bottomAxis(), modifier = Modifier.fillMaxWidth().height(300.dp)
+            chart = lineChart(), model = entryModelOf(*chartEntries.toTypedArray()), startAxis = startAxis(), bottomAxis = bottomAxis(), modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
         )
     }
 }

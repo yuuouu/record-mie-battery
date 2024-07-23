@@ -1,7 +1,7 @@
 package yuu.record
 
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -17,7 +17,13 @@ import java.util.UUID
 // ChargingRecord.kt
 @Serializable
 data class ChargingRecord(
-    @Serializable(with = UUIDSerializer::class) val id: UUID = UUID.randomUUID(), val date: String, val chargingTime: String, val chargingCost: Double, val totalRange: Int, val notes: String, val rangeAdded: Int = 0  // 将这个字段加回来，但默认值为0
+    @Serializable(with = UUIDSerializer::class) val id: UUID = UUID.randomUUID(),
+    val date: String,
+    val chargingTime: String,
+    val chargingCost: Double,
+    val totalRange: Int,
+    val notes: String,
+    val rangeAdded: Int = 0
 )
 
 object UUIDSerializer: KSerializer<UUID> {

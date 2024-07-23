@@ -68,7 +68,9 @@ fun MainScreen(viewModel: ChargingViewModel) {
             ChargingChart(records = records)
         } else {
             Column(
-                modifier = Modifier.padding(paddingValues).fillMaxSize()
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .fillMaxSize()
             ) {
                 ChargingList(records = records, onEdit = { editingRecord = it }, onDelete = { viewModel.deleteChargingRecord(it) })
             }
@@ -86,8 +88,7 @@ fun MainScreen(viewModel: ChargingViewModel) {
         AddChargingDialog(onDismiss = { editingRecord = null }, onAdd = { updatedRecord ->
             viewModel.updateChargingRecord(updatedRecord.copy(id = record.id))
             editingRecord = null
-        }, initialRecord = record
-        )
+        }, initialRecord = record)
     }
 }
 
@@ -115,7 +116,12 @@ fun AddChargingDialog(
         Button(onClick = {
             onAdd(
                 ChargingRecord(
-                    date = date, rangeAdded = rangeAdded.toIntOrNull() ?: 0, chargingTime = chargingTime, chargingCost = chargingCost.toDoubleOrNull() ?: 0.0, totalRange = totalRange.toIntOrNull() ?: 0, notes = notes
+                    date = date,
+                    rangeAdded = rangeAdded.toIntOrNull() ?: 0,
+                    chargingTime = chargingTime,
+                    chargingCost = chargingCost.toDoubleOrNull() ?: 0.0,
+                    totalRange = totalRange.toIntOrNull() ?: 0,
+                    notes = notes
                 )
             )
         }) {
