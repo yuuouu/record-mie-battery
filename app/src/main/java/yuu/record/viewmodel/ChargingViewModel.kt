@@ -1,6 +1,7 @@
 package yuu.record.viewmodel
 
 import android.content.Context
+import android.util.Log.e
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,14 +34,14 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
 
     fun addChargingRecord(record: ChargingRecord) {
         viewModelScope.launch {
-            val newRecord = calculateRangeAdded(record)
+            val newRecord = calculateRangeAdded(record, null)
             repository.addRecord(newRecord)
         }
     }
 
     fun updateChargingRecord(record: ChargingRecord) {
         viewModelScope.launch {
-            val updatedRecord = calculateRangeAdded(record)
+            val updatedRecord = calculateRangeAdded(record, findPreviousRecord(record))
             repository.updateRecord(updatedRecord)
         }
     }
@@ -51,15 +52,31 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
         }
     }
 
-    private fun calculateRangeAdded(record: ChargingRecord): ChargingRecord {
-        val previousRecord = chargingRecords.value.lastOrNull()
+    private fun calculateRangeAdded(record: ChargingRecord, previousRecord: ChargingRecord?): ChargingRecord {
         return if (previousRecord != null) {
-            record.copy(rangeAdded = record.totalRange-previousRecord.totalRange)
+            record.copy(rangeAdded = record.totalRange - previousRecord.totalRange)
         } else {
             record.copy(rangeAdded = record.totalRange)
         }
     }
 
+    private fun findPreviousRecord(record: ChargingRecord): ChargingRecord? {
+        val sortedRecords = chargingRecords.value.sortedBy {
+            try {
+                record.date.split("/").map { it.toInt() }.let { parts ->
+                    when (parts.size) {
+                        2    -> parts[0] * 100 + parts[1]
+                        3    -> parts[0] * 1000 + parts[1] * 100 + parts[2]
+                        else -> Int.MAX_VALUE   // 如果格式不正确，将该记录排到最后
+                    }
+                }
+            } catch (e: NumberFormatException) {   // 如果无法解析为数字，将该记录排到最后
+                Int.MAX_VALUE
+            }
+        }
+        val index = sortedRecords.indexOfFirst { it.id == record.id }
+        return if (index > 0) sortedRecords[index - 1] else null
+    }
 
     fun exportToExcel(context: Context) {
         viewModelScope.launch {
@@ -77,7 +94,7 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
 
             // Fill data
             chargingRecords.value.forEachIndexed { index, record ->
-                val row = sheet.createRow(index+1)
+                val row = sheet.createRow(index + 1)
                 row.createCell(0).setCellValue(record.date)
                 row.createCell(1).setCellValue(record.rangeAdded.toDouble())
                 row.createCell(2).setCellValue(record.chargingTime)
@@ -87,7 +104,7 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
             }
 
             // Save the workbook
-            val fileName = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())+"记录.xlsx"
+            val fileName = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) + "记录.xlsx"
             val file = File(context.getExternalFilesDir(null), fileName)
             FileOutputStream(file).use {
                 workbook.write(it)
