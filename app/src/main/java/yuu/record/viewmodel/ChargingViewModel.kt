@@ -2,6 +2,7 @@ package yuu.record.viewmodel
 
 import android.content.ContentValues
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log.e
@@ -9,16 +10,18 @@ import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import yuu.record.ChargingRecord
-import yuu.record.ChargingRepository
-import java.io.File
-import java.io.FileOutputStream
+import yuu.record.data.ChargingRecord
+import yuu.record.data.ChargingRepository
 import java.io.OutputStream
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 /**
  * @Author      : yuu
@@ -39,7 +42,7 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
 
     fun addChargingRecord(record: ChargingRecord) {
         viewModelScope.launch {
-            val newRecord = calculateRangeAdded(record, null)
+            val newRecord = calculateRangeAdded(record, chargingRecords.value.lastOrNull())
             repository.addRecord(newRecord)
         }
     }
@@ -139,5 +142,85 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
             }
             workbook.close()
         }
+    }
+
+    fun exportToJson(context: Context) {
+        val json = Json.encodeToString(chargingRecords.value)
+
+        val resolver = context.contentResolver
+        val contentUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        } else {
+            MediaStore.Files.getContentUri("external")
+        }
+
+        val fileName = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) + "记录.json"
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+            put(MediaStore.Downloads.MIME_TYPE, "application/json")
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+
+        val uri = resolver.insert(contentUri, contentValues)
+        uri?.let { fileUri ->
+            resolver.openOutputStream(fileUri)?.use { outputStream: OutputStream ->
+                outputStream.write(json.toByteArray())
+            }
+            contentValues.clear()
+            contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(fileUri, contentValues, null, null)
+
+            Toast.makeText(context, "JSON 文件已保存到下载目录", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun importJsonData(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val content = inputStream?.bufferedReader().use { it?.readText() }
+                content?.let {
+                    val importedRecords: List<ChargingRecord> = Json.decodeFromString(it)
+                    // 验证导入的数据
+                    if (validateImportedRecords(importedRecords)) {
+                        // 替换所有记录
+                        repository.replaceAllRecords(importedRecords)
+                        // 更新 ViewModel 中的数据
+                        _chargingRecords.value = importedRecords
+                        Toast.makeText(context, "JSON 数据导入成功", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "导入的数据格式不正确", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "导入失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun validateImportedRecords(records: List<ChargingRecord>): Boolean {
+        // 在这里添加验证逻辑
+        // 例如，检查每条记录是否包含所有必要的字段，日期格式是否正确等
+        return records.all { record ->
+            record.date.isNotBlank() && record.chargingTime.isNotBlank() && record.chargingCost >= 0 && record.totalRange > 0
+        }
+    }
+
+    private val _showImportConfirmation = MutableStateFlow<Uri?>(null)
+    val showImportConfirmation: StateFlow<Uri?> = _showImportConfirmation
+
+    fun triggerImport(uri: Uri) {
+        _showImportConfirmation.value = uri
+    }
+
+    fun confirmImport(context: Context) {
+        _showImportConfirmation.value?.let { uri ->
+            importJsonData(context, uri)
+            _showImportConfirmation.value = null
+        }
+    }
+
+    fun cancelImport() {
+        _showImportConfirmation.value = null
     }
 }

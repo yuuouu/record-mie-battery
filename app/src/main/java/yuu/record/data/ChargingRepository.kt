@@ -1,10 +1,5 @@
-package yuu.record
+package yuu.record.data
 
-/**
- * @Author      : yuu
- * @Date        : 2024-07-23
- * @Description :
- */
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -32,7 +27,7 @@ class ChargingRepository(private val context: Context) {
     suspend fun addRecord(record: ChargingRecord) {
         context.dataStore.edit { preferences ->
             val currentRecords = preferences[recordsKey]?.let { Json.decodeFromString<List<ChargingRecord>>(it) } ?: emptyList()
-            val updatedRecords = currentRecords+record
+            val updatedRecords = currentRecords + record
             preferences[recordsKey] = Json.encodeToString(updatedRecords)
         }
     }
@@ -50,6 +45,18 @@ class ChargingRepository(private val context: Context) {
             val currentRecords = preferences[recordsKey]?.let { Json.decodeFromString<List<ChargingRecord>>(it) } ?: emptyList()
             val updatedRecords = currentRecords.filter { it.id != record.id }
             preferences[recordsKey] = Json.encodeToString(updatedRecords)
+        }
+    }
+
+    suspend fun replaceAllRecords(newRecords: List<ChargingRecord>) {
+        context.dataStore.edit { preferences ->
+            preferences[recordsKey] = Json.encodeToString(newRecords)
+        }
+    }
+
+    suspend fun deleteAllRecords() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(recordsKey)
         }
     }
 }

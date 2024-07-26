@@ -65,7 +65,8 @@ dependencies {
     implementation(libs.poi.ooxml)
     implementation(libs.vico.compose)
     implementation(libs.compose.m3)
-    implementation("com.google.accompanist:accompanist-systemuicontroller:0.30.1")
+    implementation(libs.accompanist.systemuicontroller)
+//    implementation(libs.core
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)

@@ -1,8 +1,12 @@
 package yuu.record
 
-import androidx.activity.OnBackPressedCallback
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -22,16 +26,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import yuu.record.data.ChargingRecord
 import yuu.record.viewmodel.ChargingViewModel
 
 /**
@@ -48,6 +50,13 @@ fun MainScreen(viewModel: ChargingViewModel) {
     var showChartPage by remember { mutableStateOf(false) }
     val records by viewModel.chargingRecords.collectAsState()
     val context = LocalContext.current
+    val showImportConfirmation by viewModel.showImportConfirmation.collectAsState()
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.triggerImport(it) }
+    }
 
     // 添加 BackHandler
     BackHandler(enabled = showChartPage) {
@@ -62,6 +71,14 @@ fun MainScreen(viewModel: ChargingViewModel) {
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                 DropdownMenuItem(text = { Text("充电记录图表") }, onClick = {
                     showChartPage = true
+                    showMenu = false
+                })
+                DropdownMenuItem(text = { Text("导入Json数据") }, onClick = {
+                    launcher.launch("application/json")
+                    showMenu = false
+                })
+                DropdownMenuItem(text = { Text("导出数据到Json") }, onClick = {
+                    viewModel.exportToJson(context)
                     showMenu = false
                 })
                 DropdownMenuItem(text = { Text("导出数据到Excel") }, onClick = {
@@ -100,6 +117,29 @@ fun MainScreen(viewModel: ChargingViewModel) {
             viewModel.updateChargingRecord(updatedRecord.copy(id = record.id))
             editingRecord = null
         }, initialRecord = record)
+    }
+
+    // 确认对话框
+    if (showImportConfirmation != null) {
+        AlertDialog(onDismissRequest = { viewModel.cancelImport() }, title = { Text("确认导入") }, text = { Text("导入新数据将会删除所有现有数据,是否继续?") }, confirmButton = {
+            Button(onClick = { viewModel.confirmImport(context) }) {
+                Text("确认导入")
+            }
+        }, dismissButton = {
+            Button(onClick = { viewModel.cancelImport() }) {
+                Text("取消")
+            }
+        })
+    }
+
+    fun openDownloadsDirectory(context: Context, launcher: (Intent) -> Unit) {
+        val downloadsUri: Uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Download")
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(DocumentsContract.EXTRA_INITIAL_URI, downloadsUri)
+        }
+        launcher(intent)
     }
 }
 

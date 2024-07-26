@@ -1,4 +1,4 @@
-package yuu.record
+package yuu.record.data
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
