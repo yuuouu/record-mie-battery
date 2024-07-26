@@ -50,7 +50,7 @@ fun ChargingList(
                     )
                 }
             }, dismissContent = {
-                ChargingRecordItem(record = record, onEdit = onEdit, modifier = Modifier.clickable { onEdit(record) })
+                ChargingRecordItem(record = record, modifier = Modifier.clickable { onEdit(record) })
             }, directions = setOf(DismissDirection.EndToStart)
             )
         }
@@ -74,7 +74,7 @@ fun ChargingList(
 
 @Composable
 fun ChargingRecordItem(
-    record: ChargingRecord, onEdit: (ChargingRecord) -> Unit, modifier: Modifier = Modifier
+    record: ChargingRecord, modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier

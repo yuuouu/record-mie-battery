@@ -1,5 +1,8 @@
 package yuu.record
 
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -19,10 +22,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -42,6 +48,11 @@ fun MainScreen(viewModel: ChargingViewModel) {
     var showChartPage by remember { mutableStateOf(false) }
     val records by viewModel.chargingRecords.collectAsState()
     val context = LocalContext.current
+
+    // 添加 BackHandler
+    BackHandler(enabled = showChartPage) {
+        showChartPage = false
+    }
 
     Scaffold(topBar = {
         TopAppBar(title = { Text("电动车充电记录") }, actions = {
@@ -106,7 +117,7 @@ fun AddChargingDialog(
     AlertDialog(onDismissRequest = onDismiss, title = { Text(if (initialRecord == null) "添加充电记录" else "编辑充电记录") }, text = {
         Column {
             TextField(value = date, onValueChange = { date = it }, label = { Text("日期") })
-            TextField(value = rangeAdded, onValueChange = { rangeAdded = it }, label = { Text("续航里程") })
+//            TextField(value = rangeAdded, onValueChange = { rangeAdded = it }, label = { Text("续航里程") })
             TextField(value = chargingTime, onValueChange = { chargingTime = it }, label = { Text("充电时间") })
             TextField(value = chargingCost, onValueChange = { chargingCost = it }, label = { Text("充电金额") })
             TextField(value = totalRange, onValueChange = { totalRange = it }, label = { Text("当前总续航") })

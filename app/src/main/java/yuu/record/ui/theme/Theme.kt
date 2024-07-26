@@ -71,7 +71,7 @@ private val DarkColors = darkColorScheme(
     error = md_theme_dark_error,
     onError = md_theme_dark_onError,
     background = md_theme_dark_background,
-    onBackground = md_theme_dark_onBackground,
+    onBackground = md_theme_light_onBackground,
     surface = md_theme_dark_surface,
     onSurface = md_theme_dark_onSurface,
 )

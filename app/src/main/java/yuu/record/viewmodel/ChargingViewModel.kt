@@ -1,7 +1,11 @@
 package yuu.record.viewmodel
 
+import android.content.ContentValues
 import android.content.Context
+import android.os.Build
+import android.provider.MediaStore
 import android.util.Log.e
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +16,7 @@ import yuu.record.ChargingRecord
 import yuu.record.ChargingRepository
 import java.io.File
 import java.io.FileOutputStream
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -86,10 +91,10 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
             // Create header row
             val headerRow = sheet.createRow(0)
             headerRow.createCell(0).setCellValue("日期")
-            headerRow.createCell(1).setCellValue("续航里程")
-            headerRow.createCell(2).setCellValue("充电时间")
+            headerRow.createCell(1).setCellValue("续航里程(km)")
+            headerRow.createCell(2).setCellValue("充电时间(h)")
             headerRow.createCell(3).setCellValue("充电金额")
-            headerRow.createCell(4).setCellValue("当前总续航")
+            headerRow.createCell(4).setCellValue("当前总续航(km)")
             headerRow.createCell(5).setCellValue("备注")
 
             // Fill data
@@ -104,10 +109,33 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
             }
 
             // Save the workbook
+            val resolver = context.contentResolver
+            val contentUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI
+            } else {
+                MediaStore.Files.getContentUri("external")
+            }
+
             val fileName = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) + "记录.xlsx"
-            val file = File(context.getExternalFilesDir(null), fileName)
-            FileOutputStream(file).use {
-                workbook.write(it)
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                put(MediaStore.Downloads.MIME_TYPE, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+
+            val uri = resolver.insert(contentUri, contentValues)
+            uri?.let { fileUri ->
+                resolver.openOutputStream(fileUri)?.use { outputStream: OutputStream ->
+                    workbook.write(outputStream)
+                }
+                contentValues.clear()
+                contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(fileUri, contentValues, null, null)
+
+                // 可选：通知用户文件已保存
+//                 showNotification(context, "Excel 文件已保存到下载目录", fileUri)
+                e("TAG", "exportToExcel:Excel 文件已保存到下载目录 path= $fileUri")
+                Toast.makeText(context, "Excel 文件已保存到下载目录", Toast.LENGTH_SHORT).show()
             }
             workbook.close()
         }
