@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
@@ -26,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,9 +51,13 @@ fun MainScreen(viewModel: ChargingViewModel) {
     var editingRecord by remember { mutableStateOf<ChargingRecord?>(null) }
     var showMenu by remember { mutableStateOf(false) }
     var showChartPage by remember { mutableStateOf(false) }
-    val records by viewModel.chargingRecords.collectAsState()
+    val records by viewModel.reversedChargingRecords.collectAsState()
     val context = LocalContext.current
     val showImportConfirmation by viewModel.showImportConfirmation.collectAsState()
+    val justAddedRecord by viewModel.justAddedRecord.collectAsState()
+    var recordToDelete
+    by remember { mutableStateOf<ChargingRecord?>(null) }
+    val listState = rememberLazyListState()
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -62,6 +69,14 @@ fun MainScreen(viewModel: ChargingViewModel) {
     BackHandler(enabled = showChartPage) {
         showChartPage = false
     }
+
+    LaunchedEffect(justAddedRecord) {
+        if (justAddedRecord) {
+            listState.animateScrollToItem(0)
+            viewModel.resetJustAddedFlag()
+        }
+    }
+
 
     Scaffold(topBar = {
         TopAppBar(title = { Text("电动车充电记录") }, actions = {

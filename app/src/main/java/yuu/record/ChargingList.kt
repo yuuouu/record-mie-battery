@@ -58,7 +58,7 @@ fun ChargingList(
     }
 
     recordToDelete?.let { record ->
-        AlertDialog(onDismissRequest = { recordToDelete = null }, title = { Text("确认删除") }, text = { Text("您确定要删除这条记录吗？") }, confirmButton = {
+        AlertDialog(onDismissRequest = { recordToDelete = null }, title = { Text("确认删除") }, text = { Text("您确定要删除${record.date}的记录吗？") }, confirmButton = {
             Button(onClick = {
                 onDelete(record)
                 recordToDelete = null

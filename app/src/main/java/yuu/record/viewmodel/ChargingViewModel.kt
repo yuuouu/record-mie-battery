@@ -30,12 +30,18 @@ import java.util.Locale
  */
 class ChargingViewModel(private val repository: ChargingRepository): ViewModel() {
     private val _chargingRecords = MutableStateFlow<List<ChargingRecord>>(emptyList())
-    val chargingRecords = _chargingRecords.asStateFlow()
+    private val chargingRecords = _chargingRecords.asStateFlow()
+    private val _reversedChargingRecords = MutableStateFlow<List<ChargingRecord>>(emptyList())
+    val reversedChargingRecords: StateFlow<List<ChargingRecord>> = _reversedChargingRecords
+    private val _justAddedRecord = MutableStateFlow(false)
+    val justAddedRecord: StateFlow<Boolean> = _justAddedRecord
+
 
     init {
         viewModelScope.launch {
             repository.getAllRecords().collect { records ->
                 _chargingRecords.value = records
+                _reversedChargingRecords.value = records.reversed()
             }
         }
     }
@@ -44,6 +50,7 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
         viewModelScope.launch {
             val newRecord = calculateRangeAdded(record, chargingRecords.value.lastOrNull())
             repository.addRecord(newRecord)
+            _justAddedRecord.value = true
         }
     }
 
@@ -58,6 +65,10 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
         viewModelScope.launch {
             repository.deleteRecord(record)
         }
+    }
+
+    fun resetJustAddedFlag() {
+        _justAddedRecord.value = false
     }
 
     private fun calculateRangeAdded(record: ChargingRecord, previousRecord: ChargingRecord?): ChargingRecord {
