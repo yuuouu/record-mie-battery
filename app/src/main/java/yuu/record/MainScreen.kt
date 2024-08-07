@@ -7,11 +7,16 @@ import android.provider.DocumentsContract
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
@@ -35,7 +40,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import yuu.record.data.ChargingRecord
 import yuu.record.viewmodel.ChargingViewModel
 
@@ -55,8 +64,7 @@ fun MainScreen(viewModel: ChargingViewModel) {
     val context = LocalContext.current
     val showImportConfirmation by viewModel.showImportConfirmation.collectAsState()
     val justAddedRecord by viewModel.justAddedRecord.collectAsState()
-    var recordToDelete
-    by remember { mutableStateOf<ChargingRecord?>(null) }
+//    var recordToDelete by remember { mutableStateOf<ChargingRecord?>(null) }
     val listState = rememberLazyListState()
 
     val launcher = rememberLauncherForActivityResult(
@@ -115,7 +123,7 @@ fun MainScreen(viewModel: ChargingViewModel) {
                     .padding(paddingValues)
                     .fillMaxSize()
             ) {
-                ChargingList(records = records, onEdit = { editingRecord = it }, onDelete = { viewModel.deleteChargingRecord(it) })
+                ChargingList(records = records, listState = listState,onEdit = { editingRecord = it }, onDelete = { viewModel.deleteChargingRecord(it) })
             }
         }
     }
@@ -176,7 +184,19 @@ fun AddChargingDialog(
             TextField(value = chargingTime, onValueChange = { chargingTime = it }, label = { Text("充电时间") })
             TextField(value = chargingCost, onValueChange = { chargingCost = it }, label = { Text("充电金额") })
             TextField(value = totalRange, onValueChange = { totalRange = it }, label = { Text("当前总续航") })
-            TextField(value = notes, onValueChange = { notes = it }, label = { Text("备注") })
+            TextField(value = notes, onValueChange = { notes = it }, label = { Text("备注") }, minLines = 3, maxLines = 3
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)
+            ) {
+                listOf("免费", "两格电").forEach { keyword ->
+                    OutlinedTextField(value = keyword, onValueChange = {}, readOnly = true, textStyle = TextStyle(fontSize = 12.sp), colors = TextFieldDefaults.outlinedTextFieldColors(
+                        unfocusedBorderColor = Color.LightGray, backgroundColor = Color.LightGray.copy(alpha = 0.1f)
+                    ), modifier = Modifier.height(28.dp).clickable {
+                            notes += if (notes.isEmpty()) keyword else " $keyword"
+                        })
+                }
+            }
         }
     }, confirmButton = {
         Button(onClick = {

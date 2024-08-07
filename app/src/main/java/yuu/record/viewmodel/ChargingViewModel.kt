@@ -48,7 +48,9 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
 
     fun addChargingRecord(record: ChargingRecord) {
         viewModelScope.launch {
-            val newRecord = calculateRangeAdded(record, chargingRecords.value.lastOrNull())
+            val sortedRecords = chargingRecords.value.sortedBy { sortKeyForRecord(it) }
+            val previousRecord = sortedRecords.lastOrNull { sortKeyForRecord(it) < sortKeyForRecord(record) }
+            val newRecord = calculateRangeAdded(record, previousRecord)
             repository.addRecord(newRecord)
             _justAddedRecord.value = true
         }
@@ -56,11 +58,13 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
 
     fun updateChargingRecord(record: ChargingRecord) {
         viewModelScope.launch {
-            val updatedRecord = calculateRangeAdded(record, findPreviousRecord(record))
+            val sortedRecords = chargingRecords.value.sortedBy { sortKeyForRecord(it) }
+            val index = sortedRecords.indexOfFirst { it.id == record.id }
+            val previousRecord = if (index > 0) sortedRecords[index - 1] else null
+            val updatedRecord = calculateRangeAdded(record, previousRecord)
             repository.updateRecord(updatedRecord)
         }
     }
-
     fun deleteChargingRecord(record: ChargingRecord) {
         viewModelScope.launch {
             repository.deleteRecord(record)
@@ -71,30 +75,34 @@ class ChargingViewModel(private val repository: ChargingRepository): ViewModel()
         _justAddedRecord.value = false
     }
 
-    private fun calculateRangeAdded(record: ChargingRecord, previousRecord: ChargingRecord?): ChargingRecord {
+ /*   private fun calculateRangeAdded(record: ChargingRecord, previousRecord: ChargingRecord?): ChargingRecord {
         return if (previousRecord != null) {
             record.copy(rangeAdded = record.totalRange - previousRecord.totalRange)
         } else {
             record.copy(rangeAdded = record.totalRange)
         }
+    }*/
+
+    private fun sortKeyForRecord(record: ChargingRecord): Int {
+        return try {
+            record.date.split("/").map { it.toInt() }.let { parts ->
+                when (parts.size) {
+                    2    -> parts[0] * 100 + parts[1]
+                    3    -> parts[0] * 10000 + parts[1] * 100 + parts[2]
+                    else -> Int.MAX_VALUE // 如果格式不正确，将该记录排到最后
+                }
+            }
+        } catch (e: NumberFormatException) {
+            Int.MAX_VALUE // 如果无法解析为数字，将该记录排到最后
+        }
     }
 
-    private fun findPreviousRecord(record: ChargingRecord): ChargingRecord? {
-        val sortedRecords = chargingRecords.value.sortedBy {
-            try {
-                record.date.split("/").map { it.toInt() }.let { parts ->
-                    when (parts.size) {
-                        2    -> parts[0] * 100 + parts[1]
-                        3    -> parts[0] * 1000 + parts[1] * 100 + parts[2]
-                        else -> Int.MAX_VALUE   // 如果格式不正确，将该记录排到最后
-                    }
-                }
-            } catch (e: NumberFormatException) {   // 如果无法解析为数字，将该记录排到最后
-                Int.MAX_VALUE
-            }
+    private fun calculateRangeAdded(record: ChargingRecord, previousRecord: ChargingRecord?): ChargingRecord {
+        return if (previousRecord != null) {
+            record.copy(rangeAdded = record.totalRange - previousRecord.totalRange)
+        } else {
+            record
         }
-        val index = sortedRecords.indexOfFirst { it.id == record.id }
-        return if (index > 0) sortedRecords[index - 1] else null
     }
 
     fun exportToExcel(context: Context) {

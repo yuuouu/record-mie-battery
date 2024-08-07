@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*  // 注意这里使用的是 material，不是 material3
 import androidx.compose.material.icons.Icons
@@ -24,11 +25,11 @@ import yuu.record.data.ChargingRecord
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ChargingList(
-    records: List<ChargingRecord>, onEdit: (ChargingRecord) -> Unit, onDelete: (ChargingRecord) -> Unit
+    records: List<ChargingRecord>, listState: LazyListState, onEdit: (ChargingRecord) -> Unit, onDelete: (ChargingRecord) -> Unit
 ) {
     var recordToDelete by remember { mutableStateOf<ChargingRecord?>(null) }
 
-    LazyColumn {
+    LazyColumn(state = listState) {
         items(records, key = { it.id }) { record ->
             val dismissState = rememberDismissState(confirmStateChange = {
                 if (it == DismissValue.DismissedToStart) {

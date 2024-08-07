@@ -27,7 +27,7 @@ class ChargingRepository(private val context: Context) {
     suspend fun addRecord(record: ChargingRecord) {
         context.dataStore.edit { preferences ->
             val currentRecords = preferences[recordsKey]?.let { Json.decodeFromString<List<ChargingRecord>>(it) } ?: emptyList()
-            val updatedRecords = currentRecords + record
+            val updatedRecords = (currentRecords + record).sortedBy { sortKeyForRecord(it) }
             preferences[recordsKey] = Json.encodeToString(updatedRecords)
         }
     }
@@ -35,7 +35,7 @@ class ChargingRepository(private val context: Context) {
     suspend fun updateRecord(record: ChargingRecord) {
         context.dataStore.edit { preferences ->
             val currentRecords = preferences[recordsKey]?.let { Json.decodeFromString<List<ChargingRecord>>(it) } ?: emptyList()
-            val updatedRecords = currentRecords.map { if (it.id == record.id) record else it }
+            val updatedRecords = currentRecords.map { if (it.id == record.id) record else it }.sortedBy { sortKeyForRecord(it) }
             preferences[recordsKey] = Json.encodeToString(updatedRecords)
         }
     }
@@ -57,6 +57,20 @@ class ChargingRepository(private val context: Context) {
     suspend fun deleteAllRecords() {
         context.dataStore.edit { preferences ->
             preferences.remove(recordsKey)
+        }
+    }
+
+    private fun sortKeyForRecord(record: ChargingRecord): Int {
+        return try {
+            record.date.split("/").map { it.toInt() }.let { parts ->
+                when (parts.size) {
+                    2    -> parts[0] * 100 + parts[1]
+                    3    -> parts[0] * 10000 + parts[1] * 100 + parts[2]
+                    else -> Int.MAX_VALUE // 如果格式不正确，将该记录排到最后
+                }
+            }
+        } catch (e: NumberFormatException) {
+            Int.MAX_VALUE // 如果无法解析为数字，将该记录排到最后
         }
     }
 }
